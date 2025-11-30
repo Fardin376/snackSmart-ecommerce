@@ -1,100 +1,160 @@
-import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
+import axiosInstance from './axiosInstance.js';
 
-export const useGetCustomerCart = (user) => {
+/**
+ * Custom hook to fetch user's cart items
+ * @param {Object} user - User object containing user id
+ * @param {number} refreshTrigger - Trigger to refresh cart data
+ * @returns {Object} - { data: cart items array, error: error object }
+ */
+export const useGetCustomerCart = (user, refreshTrigger = 0) => {
   const [cart, setCart] = useState([]);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !user.cust_id) {
-      setError(new Error("user or user.cust_id is undefined"));
+    if (!user || !user.id) {
+      setIsLoading(false);
       return;
     }
-    axios
-      .get(`http://localhost:8085/api/ecommerce/cart`, {
-        params: {
-          cust_id: user.cust_id,
-        },
-      })
-      .then((res) => {
-        if (!res.data) throw new Error("error on get all cart info");
-        setCart(res.data ? res.data : "");
-        console.log("sup", res);
-      })
-      .catch((err) => {
+
+    const fetchCart = async () => {
+      try {
+        const response = await axiosInstance.get('/cart');
+
+        if (response.data.ok) {
+          setCart(response.data.data || []);
+        } else {
+          throw new Error(response.data.error || 'Failed to fetch cart');
+        }
+      } catch (err) {
+        console.error('Error fetching cart:', err);
         setError(err);
-      });
-  }, [user]);
-
-  return { data: cart, error: error };
-};
-
-export const deleteCart = async (item) => {
-  console.log(item);
-  try {
-    const res = await axios.delete(
-      `http://localhost:8085/api/ecommerce/cart/${item.cust_id}/${item.product_id}`
-    );
-    if (!res.data.ok) throw new Error(res.data.error);
-
-    return {
-      ok: true,
-      data: res.data,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-    };
-  }
-};
-
-export const updateCartQuantity = async (item, quantity) => {
-  try {
-    const res = await axios.put(
-      "http://localhost:8085/api/ecommerce/cart/update",
-      null,
-      {
-        params: {
-          cust_id: item.cust_id,
-          product_id: item.product_id,
-          quantity: quantity,
-        },
+        setCart([]);
+      } finally {
+        setIsLoading(false);
       }
-    );
-    if (!res.data.ok) throw new Error(res.data.error);
+    };
 
-    return {
-      ok: true,
-      data: res.data,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-    };
-  }
+    fetchCart();
+  }, [user, refreshTrigger]);
+
+  return { data: cart, error, isLoading };
 };
-
-export const addCartQuantity = async (cust_id, product_id, add_quantity) => {
+/**
+ * Add item to cart
+ * @param {number} productId - Product ID to add
+ * @param {number} quantity - Quantity to add (default: 1)
+ * @returns {Promise<Object>} - { ok: boolean, data/error: Object }
+ */
+export const addToCart = async (productId, quantity = 1) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8085/api/ecommerce/cart/add",
-      {
-        cust_id: cust_id,
-        product_id: product_id,
-        add_quantity: add_quantity,
-      }
-    );
-    console.log(res);
+    const response = await axiosInstance.post('/cart', {
+      productId,
+      quantity,
+    });
 
-    if (!res.data.ok) throw new Error(res.data.error);
-
-    return {
-      ok: true,
-      data: res.data,
-    };
+    if (response.data.ok) {
+      return {
+        ok: true,
+        data: response.data.data,
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to add to cart');
+    }
   } catch (error) {
+    console.error('Error adding to cart:', error);
     return {
       ok: false,
+      error:
+        error.response?.data?.error || error.message || 'Failed to add to cart',
     };
   }
 };
+
+/**
+ * Update cart item quantity
+ * @param {number} productId - Product ID to update
+ * @param {number} quantity - New quantity
+ * @returns {Promise<Object>} - { ok: boolean, data/error: Object }
+ */
+export const updateCartQuantity = async (productId, quantity) => {
+  try {
+    const response = await axiosInstance.put('/cart', {
+      productId,
+      quantity,
+    });
+
+    if (response.data.ok) {
+      return {
+        ok: true,
+        data: response.data.data,
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to update cart');
+    }
+  } catch (error) {
+    console.error('Error updating cart:', error);
+    return {
+      ok: false,
+      error:
+        error.response?.data?.error || error.message || 'Failed to update cart',
+    };
+  }
+};
+
+/**
+ * Remove item from cart
+ * @param {number} productId - Product ID to remove
+ * @returns {Promise<Object>} - { ok: boolean, message/error: string }
+ */
+export const removeFromCart = async (productId) => {
+  try {
+    const response = await axiosInstance.delete(`/cart/${productId}`);
+
+    if (response.data.ok) {
+      return {
+        ok: true,
+        message: response.data.message,
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to remove from cart');
+    }
+  } catch (error) {
+    console.error('Error removing from cart:', error);
+    return {
+      ok: false,
+      error:
+        error.response?.data?.error ||
+        error.message ||
+        'Failed to remove from cart',
+    };
+  }
+};
+
+/**
+ * Clear entire cart
+ * @returns {Promise<Object>} - { ok: boolean, message/error: string }
+ */
+export const clearCart = async () => {
+  try {
+    const response = await axiosInstance.delete('/cart');
+
+    if (response.data.ok) {
+      return {
+        ok: true,
+        message: response.data.message,
+      };
+    } else {
+      throw new Error(response.data.error || 'Failed to clear cart');
+    }
+  } catch (error) {
+    console.error('Error clearing cart:', error);
+    return {
+      ok: false,
+      error:
+        error.response?.data?.error || error.message || 'Failed to clear cart',
+    };
+  }
+};
+3;
