@@ -18,7 +18,7 @@ export default function ConfirmEmail() {
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const confirmEmail = async () => {

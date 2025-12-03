@@ -34,21 +34,35 @@ export default function Products({ searchTerm, sortOption, onCartUpdate }) {
     fetchProducts();
   }, [searchTerm]);
 
-  const fetchProducts = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const data = await productService.searchProducts(searchTerm || '');
-      setProducts(data);
-    } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          'Failed to load products. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
+const fetchProducts = async () => {
+  setIsLoading(true);
+  setError('');
+
+  try {
+    let data;
+
+    if (searchTerm && searchTerm.trim() !== '') {
+      // User typed something → search
+      data = await productService.searchProducts(searchTerm);
+    } else {
+      // No search term → load all products
+      data = await productService.getAllProducts();
     }
-  };
+
+    console.log('Products.jsx fetched products:', data);
+    setProducts(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error('fetchProducts error:', err);
+    setError(
+      err?.error ||
+        err?.message ||
+        'Failed to load products. Please try again.'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   // Sort products
   const sortedProducts = React.useMemo(() => {

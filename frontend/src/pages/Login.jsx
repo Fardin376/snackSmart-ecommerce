@@ -28,7 +28,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
