@@ -1,16 +1,20 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import { productSchema } from '../utils/validators.js';
-
-const prisma = new PrismaClient();
 
 /**
  * Get all products with optional search and sort
  */
 export const getAllProducts = async (req, res) => {
   try {
-    const { search, sortBy, sortOrder } = req.query;
+    const { search, sortBy, sortOrder, userId, sessionId } = req.query;
 
-    console.log('Search query:', { search, sortBy, sortOrder });
+    console.log('Search query:', {
+      search,
+      sortBy,
+      sortOrder,
+      userId,
+      sessionId,
+    });
 
     // Build where clause for search (MySQL is case-insensitive by default)
     const where =
@@ -33,6 +37,61 @@ export const getAllProducts = async (req, res) => {
       orderBy = { name: sortOrder === 'desc' ? 'desc' : 'asc' };
     } else if (sortBy === 'price') {
       orderBy = { price: sortOrder === 'desc' ? 'desc' : 'asc' };
+    } else if (sortBy === 'preferences' && (userId || sessionId)) {
+      // Sort by user preferences
+      const identifier = userId ? { userId: parseInt(userId) } : { sessionId };
+
+      // Get user's recent preferences
+      const preferences = await prisma.userPreference.findMany({
+        where: identifier,
+        select: {
+          productId: true,
+          category: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+
+      if (preferences.length > 0) {
+        // Get products and sort by preference relevance
+        const preferredProductIds = preferences.map((p) => p.productId);
+        const preferredCategories = [
+          ...new Set(preferences.map((p) => p.category).filter(Boolean)),
+        ];
+
+        const products = await prisma.product.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            category: true,
+            price: true,
+            image: true,
+            createdAt: true,
+          },
+        });
+
+        // Sort products by preference (viewed products first, then by category match)
+        const sortedProducts = products.sort((a, b) => {
+          const aViewed = preferredProductIds.includes(a.id);
+          const bViewed = preferredProductIds.includes(b.id);
+          const aInCategory = preferredCategories.includes(a.category);
+          const bInCategory = preferredCategories.includes(b.category);
+
+          if (aViewed && !bViewed) return -1;
+          if (!aViewed && bViewed) return 1;
+          if (aInCategory && !bInCategory) return -1;
+          if (!aInCategory && bInCategory) return 1;
+          return 0;
+        });
+
+        console.log(
+          `Found ${sortedProducts.length} products (sorted by preferences)`
+        );
+        return res.json(sortedProducts);
+      }
     }
 
     const products = await prisma.product.findMany({

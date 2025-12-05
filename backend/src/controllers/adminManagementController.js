@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import { hashPassword } from '../utils/auth.js';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const adminSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),

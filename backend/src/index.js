@@ -7,6 +7,8 @@ import emailRoutes from './routes/emailRoutes.js';
 import adminAuthRoutes from './routes/adminAuthRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
+import preferenceRoutes from './routes/preferenceRoutes.js';
+
 
 dotenv.config();
 
@@ -30,6 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/preferences', preferenceRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin', adminRoutes);
 

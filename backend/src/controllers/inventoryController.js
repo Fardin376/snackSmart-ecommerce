@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const productSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -11,6 +9,10 @@ const productSchema = z.object({
   stock: z.number().int().min(0, 'Stock must be non-negative'),
   image: z.string().url('Invalid image URL').optional(),
   status: z.enum(['active', 'inactive']).optional(),
+});
+
+const stockUpdateSchema = z.object({
+  stock: z.number().int().min(0, 'Stock must be a non-negative integer'),
 });
 
 /**
@@ -88,23 +90,24 @@ export const updateProduct = async (req, res) => {
 };
 
 /**
- * Delete product (soft delete - set to inactive)
+ * Delete product (hard delete - remove from database)
  */
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const product = await prisma.product.update({
+    await prisma.product.delete({
       where: { id: parseInt(id) },
-      data: { status: 'inactive' },
     });
 
     res.json({
-      message: 'Product deactivated successfully',
-      product,
+      message: 'Product deleted successfully',
     });
   } catch (error) {
     console.error('Delete product error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Product not found' });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -115,11 +118,11 @@ export const deleteProduct = async (req, res) => {
 export const updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { stock } = req.body;
+    const { stock } = stockUpdateSchema.parse(req.body);
 
     const product = await prisma.product.update({
       where: { id: parseInt(id) },
-      data: { stock: parseInt(stock) },
+      data: { stock },
     });
 
     res.json({
@@ -128,6 +131,13 @@ export const updateStock = async (req, res) => {
     });
   } catch (error) {
     console.error('Update stock error:', error);
+
+    if (error.errors) {
+      return res.status(400).json({
+        errors: error.errors.map((e) => e.message),
+      });
+    }
+
     res.status(500).json({ message: 'Server error' });
   }
 };

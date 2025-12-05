@@ -14,6 +14,11 @@ import {
   Button,
   CircularProgress,
   Chip,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  Divider,
 } from '@mui/material';
 import {
   TrendingUp as TrendingIcon,
@@ -22,11 +27,11 @@ import {
 } from '@mui/icons-material';
 import { salesService } from '../../services/adminService';
 
-const StatsCard = ({ icon: Icon, title, value, color }) => (
+const SummaryCard = ({ title, value, icon: Icon, color }) => (
   <Paper
     elevation={0}
     sx={{
-      p: 3,
+      p: { xs: 2, sm: 3 },
       border: '1px solid #e0e0e0',
       borderRadius: 2,
       display: 'flex',
@@ -59,7 +64,10 @@ const StatsCard = ({ icon: Icon, title, value, color }) => (
 );
 
 export default function Sales() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [summary, setSummary] = useState(null);
   const [topProducts, setTopProducts] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -75,6 +83,7 @@ export default function Sales() {
   const fetchData = async (filters = {}) => {
     try {
       setLoading(true);
+      setError(null);
       const [summaryData, topProductsData, ordersData] = await Promise.all([
         salesService.getSummary(filters.fromDate, filters.toDate),
         salesService.getTopProducts(filters.fromDate, filters.toDate),
@@ -85,6 +94,7 @@ export default function Sales() {
       setRecentOrders(ordersData);
     } catch (error) {
       console.error('Error fetching sales data:', error);
+      setError(error.response?.data?.message || 'Failed to load sales data');
     } finally {
       setLoading(false);
     }
@@ -111,13 +121,19 @@ export default function Sales() {
       {/* Date Filter */}
       <Paper
         elevation={0}
-        sx={{ p: 2.5, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          mb: 3,
+          border: '1px solid #e0e0e0',
+          borderRadius: 2,
+        }}
       >
         <Box
           sx={{
             display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
             gap: 2,
-            alignItems: 'center',
+            alignItems: { xs: 'stretch', sm: 'center' },
             flexWrap: 'wrap',
           }}
         >
@@ -130,7 +146,7 @@ export default function Sales() {
             }
             InputLabelProps={{ shrink: true }}
             size="small"
-            sx={{ width: 200 }}
+            sx={{ width: { xs: '100%', sm: 200 } }}
           />
           <TextField
             label="To Date"
@@ -141,7 +157,7 @@ export default function Sales() {
             }
             InputLabelProps={{ shrink: true }}
             size="small"
-            sx={{ width: 200 }}
+            sx={{ width: { xs: '100%', sm: 200 } }}
           />
           <Button
             variant="contained"
@@ -167,28 +183,41 @@ export default function Sales() {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />
         </Box>
+      ) : error ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" sx={{ color: '#f44336', mb: 2 }}>
+            {error}
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => fetchData(dateRange)}
+            sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' } }}
+          >
+            Retry
+          </Button>
+        </Box>
       ) : (
         <>
           {/* Stats Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <StatsCard
+          <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6} md={4}>
+              <SummaryCard
                 icon={CartIcon}
                 title="Total Orders"
                 value={summary?.totalOrders || 0}
                 color="#FF6B35"
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <StatsCard
+            <Grid item xs={12} sm={6} md={4}>
+              <SummaryCard
                 icon={MoneyIcon}
                 title="Total Revenue"
                 value={`$${parseFloat(summary?.totalRevenue || 0).toFixed(2)}`}
                 color="#4CAF50"
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <StatsCard
+            <Grid item xs={12} sm={6} md={4}>
+              <SummaryCard
                 icon={TrendingIcon}
                 title="Average Order Value"
                 value={`$${parseFloat(summary?.averageOrderValue || 0).toFixed(
@@ -214,68 +243,127 @@ export default function Sales() {
                 Top Selling Products
               </Typography>
             </Box>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#fafafa' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Rank</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Units Sold</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Revenue</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {topProducts.length > 0 ? (
-                    topProducts.map((product, index) => (
-                      <TableRow
-                        key={product.productId}
-                        sx={{
-                          '&:hover': { bgcolor: '#fafafa' },
-                          '&:last-child td': { borderBottom: 0 },
-                        }}
-                      >
-                        <TableCell>
-                          <Chip
-                            label={`#${index + 1}`}
-                            size="small"
+            {isMobile ? (
+              <Box sx={{ p: 2 }}>
+                {topProducts.length > 0 ? (
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                  >
+                    {topProducts.map((product, index) => (
+                      <Card key={product.productId} variant="outlined">
+                        <CardContent>
+                          <Box
                             sx={{
-                              bgcolor: index === 0 ? '#FFD700' : '#e0e0e0',
-                              fontWeight: 600,
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              mb: 2,
                             }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          >
+                            <Chip
+                              label={`#${index + 1}`}
+                              size="small"
+                              sx={{
+                                bgcolor: index === 0 ? '#FFD700' : '#e0e0e0',
+                                fontWeight: 600,
+                              }}
+                            />
+                            <Typography
+                              variant="h6"
+                              sx={{ fontWeight: 600, color: '#4CAF50' }}
+                            >
+                              ${parseFloat(product.totalRevenue).toFixed(2)}
+                            </Typography>
+                          </Box>
+                          <Typography
+                            variant="body1"
+                            sx={{ fontWeight: 500, mb: 1 }}
+                          >
                             {product.productName}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {product.totalQuantity} units
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            {product.totalQuantity} units sold
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: 600, color: '#4CAF50' }}
-                          >
-                            ${parseFloat(product.totalRevenue).toFixed(2)}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    sx={{ color: '#999', textAlign: 'center', py: 4 }}
+                  >
+                    No product sales data available
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#fafafa' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Rank</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Product</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Units Sold</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Revenue</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {topProducts.length > 0 ? (
+                      topProducts.map((product, index) => (
+                        <TableRow
+                          key={product.productId}
+                          sx={{
+                            '&:hover': { bgcolor: '#fafafa' },
+                            '&:last-child td': { borderBottom: 0 },
+                          }}
+                        >
+                          <TableCell>
+                            <Chip
+                              label={`#${index + 1}`}
+                              size="small"
+                              sx={{
+                                bgcolor: index === 0 ? '#FFD700' : '#e0e0e0',
+                                fontWeight: 600,
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500 }}
+                            >
+                              {product.productName}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2">
+                              {product.totalQuantity} units
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 600, color: '#4CAF50' }}
+                            >
+                              ${parseFloat(product.totalRevenue).toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" sx={{ color: '#999' }}>
+                            No product sales data available
                           </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" sx={{ color: '#999' }}>
-                          No product sales data available
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Paper>
 
           {/* Recent Orders */}
@@ -292,81 +380,160 @@ export default function Sales() {
                 Recent Orders
               </Typography>
             </Box>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#fafafa' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Order ID</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {recentOrders.length > 0 ? (
-                    recentOrders.map((order) => (
-                      <TableRow
-                        key={order.id}
-                        sx={{
-                          '&:hover': { bgcolor: '#fafafa' },
-                          '&:last-child td': { borderBottom: 0 },
-                        }}
-                      >
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontFamily: 'monospace' }}
+            {isMobile ? (
+              <Box sx={{ p: 2 }}>
+                {recentOrders.length > 0 ? (
+                  <Box
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                  >
+                    {recentOrders.map((order) => (
+                      <Card key={order.id} variant="outlined">
+                        <CardContent>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              mb: 2,
+                            }}
                           >
-                            ORD-{order.id.toString().padStart(4, '0')}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontFamily: 'monospace', fontWeight: 500 }}
+                            >
+                              ORD-{order.id.toString().padStart(4, '0')}
+                            </Typography>
+                            <Chip
+                              label={order.status}
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  order.status === 'completed'
+                                    ? '#4CAF50'
+                                    : order.status === 'pending'
+                                    ? '#FF9800'
+                                    : '#f44336',
+                                color: '#fff',
+                                fontWeight: 500,
+                                fontSize: '0.75rem',
+                              }}
+                            />
+                          </Box>
+                          <Typography
+                            variant="body1"
+                            sx={{ fontWeight: 500, mb: 0.5 }}
+                          >
                             {order.user.firstName} {order.user.lastName}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ color: '#666' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: '#666', mb: 1 }}
+                          >
                             {new Date(order.createdAt).toLocaleDateString()}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          <Divider sx={{ my: 1 }} />
+                          <Typography
+                            variant="h6"
+                            sx={{ fontWeight: 600, color: '#1a1a1a' }}
+                          >
                             ${parseFloat(order.total).toFixed(2)}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={order.status}
-                            size="small"
-                            sx={{
-                              bgcolor:
-                                order.status === 'completed'
-                                  ? '#4CAF50'
-                                  : order.status === 'pending'
-                                  ? '#FF9800'
-                                  : '#f44336',
-                              color: '#fff',
-                              fontWeight: 500,
-                              fontSize: '0.75rem',
-                            }}
-                          />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    sx={{ color: '#999', textAlign: 'center', py: 4 }}
+                  >
+                    No orders yet
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#fafafa' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Order ID</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {recentOrders.length > 0 ? (
+                      recentOrders.map((order) => (
+                        <TableRow
+                          key={order.id}
+                          sx={{
+                            '&:hover': { bgcolor: '#fafafa' },
+                            '&:last-child td': { borderBottom: 0 },
+                          }}
+                        >
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontFamily: 'monospace' }}
+                            >
+                              ORD-{order.id.toString().padStart(4, '0')}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 500 }}
+                            >
+                              {order.user.firstName} {order.user.lastName}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ color: '#666' }}>
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              ${parseFloat(order.total).toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={order.status}
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  order.status === 'completed'
+                                    ? '#4CAF50'
+                                    : order.status === 'pending'
+                                    ? '#FF9800'
+                                    : '#f44336',
+                                color: '#fff',
+                                fontWeight: 500,
+                                fontSize: '0.75rem',
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                          <Typography variant="body2" sx={{ color: '#999' }}>
+                            No orders yet
+                          </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                        <Typography variant="body2" sx={{ color: '#999' }}>
-                          No orders yet
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Paper>
         </>
       )}

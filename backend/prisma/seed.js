@@ -21,7 +21,7 @@ async function main() {
       name: 'Admin User',
       email: 'admin@snacksmart.com',
       password: adminPassword,
-      role: 'Super Admin',
+      role: 'SuperAdmin',
     },
   });
 
@@ -30,7 +30,7 @@ async function main() {
       name: 'Staff Member',
       email: 'staff@snacksmart.com',
       password: staffPassword,
-      role: 'Staff Admin',
+      role: 'StaffAdmin',
     },
   });
 
@@ -39,7 +39,7 @@ async function main() {
       name: 'John Manager',
       email: 'john.m@snacksmart.com',
       password: staffPassword,
-      role: 'Staff Admin',
+      role: 'StaffAdmin',
     },
   });
 

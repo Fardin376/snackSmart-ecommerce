@@ -5,7 +5,8 @@ import axios from 'axios';
 const FALLBACK_API_URL = 'https://snacksmart-api-445738662856.us-central1.run.app';
 
 // Try to read from Vite env, otherwise use fallback
-const API_URL = import.meta.env.VITE_API_URL || FALLBACK_API_URL;
+const API_URL =  FALLBACK_API_URL
+
 
 console.log('API_URL used by axios:', API_URL);
 
@@ -21,24 +22,6 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-export const adminAxios = axios.create({
-  baseURL: `${API_URL}/api/admin`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-adminAxios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('adminToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

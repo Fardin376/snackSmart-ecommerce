@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import { z } from 'zod';
-
-const prisma = new PrismaClient();
 
 const couponSchema = z.object({
   code: z.string().min(3, 'Code must be at least 3 characters').toUpperCase(),

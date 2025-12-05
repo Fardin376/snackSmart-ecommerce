@@ -25,6 +25,7 @@ import {
   TrendingUp as TrendingIcon,
   LocalOffer as CouponIcon,
   ExitToApp as LogoutIcon,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 256;
@@ -42,6 +43,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
 
@@ -63,6 +65,10 @@ export default function AdminLayout() {
     setAnchorEl(null);
   };
 
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
@@ -73,12 +79,109 @@ export default function AdminLayout() {
     return null;
   }
 
+  const drawerContent = (
+    <>
+      {/* Logo */}
+      <Box
+        sx={{
+          p: 3,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          borderBottom: '1px solid #e0e0e0',
+        }}
+      >
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            bgcolor: '#FF6B35',
+            borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>
+            S
+          </Typography>
+        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
+          SnackSmart
+        </Typography>
+      </Box>
+
+      {/* Menu Items */}
+      <List sx={{ px: 2, py: 2 }}>
+        {menuItems.map((item) => {
+          const isActive = currentPath === item.path;
+          return (
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton
+                onClick={() => {
+                  navigate(item.path);
+                  setMobileOpen(false);
+                }}
+                sx={{
+                  borderRadius: 1.5,
+                  bgcolor: isActive ? '#f5f5f5' : 'transparent',
+                  '&:hover': {
+                    bgcolor: isActive ? '#f5f5f5' : '#fafafa',
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: isActive ? '#1a1a1a' : '#666',
+                    minWidth: 40,
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.text}
+                  primaryTypographyProps={{
+                    fontSize: 14,
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? '#1a1a1a' : '#666',
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+      </List>
+    </>
+  );
+
   return (
     <Box sx={{ display: 'flex' }}>
-      {/* Sidebar */}
+      {/* Mobile Drawer */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{
+          keepMounted: true,
+        }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': {
+            width: drawerWidth,
+            boxSizing: 'border-box',
+            bgcolor: '#fff',
+            borderRight: '1px solid #e0e0e0',
+          },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+
+      {/* Desktop Drawer */}
       <Drawer
         variant="permanent"
         sx={{
+          display: { xs: 'none', md: 'block' },
           width: drawerWidth,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
@@ -89,73 +192,7 @@ export default function AdminLayout() {
           },
         }}
       >
-        {/* Logo */}
-        <Box
-          sx={{
-            p: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            borderBottom: '1px solid #e0e0e0',
-          }}
-        >
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: '#FF6B35',
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>
-              S
-            </Typography>
-          </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
-            SnackSmart
-          </Typography>
-        </Box>
-
-        {/* Menu Items */}
-        <List sx={{ px: 2, py: 2 }}>
-          {menuItems.map((item) => {
-            const isActive = currentPath === item.path;
-            return (
-              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: isActive ? '#f5f5f5' : 'transparent',
-                    '&:hover': {
-                      bgcolor: isActive ? '#f5f5f5' : '#fafafa',
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      color: isActive ? '#1a1a1a' : '#666',
-                      minWidth: 40,
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    primaryTypographyProps={{
-                      fontSize: 14,
-                      fontWeight: isActive ? 600 : 400,
-                      color: isActive ? '#1a1a1a' : '#666',
-                    }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
-        </List>
+        {drawerContent}
       </Drawer>
 
       {/* Main Content */}
@@ -178,9 +215,25 @@ export default function AdminLayout() {
           }}
         >
           <Toolbar sx={{ justifyContent: 'space-between' }}>
-            <Typography variant="body1" sx={{ color: '#666' }}>
-              Welcome back, <strong>{adminUser.name}</strong>
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton
+                color="inherit"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ display: { xs: 'block', md: 'none' } }}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: '#666',
+                  display: { xs: 'none', sm: 'block' },
+                }}
+              >
+                Welcome back, <strong>{adminUser.name}</strong>
+              </Typography>
+            </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <IconButton onClick={handleMenuOpen}>
                 <Avatar
@@ -232,7 +285,7 @@ export default function AdminLayout() {
         </AppBar>
 
         {/* Page Content */}
-        <Box sx={{ p: 4 }}>
+        <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
           <Outlet />
         </Box>
       </Box>

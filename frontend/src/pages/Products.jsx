@@ -15,9 +15,22 @@ import {
   Paper,
   Button,
   Snackbar,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import {
+  trackInteraction,
+  getRecentPreferences,
+  getRecommendations,
+  clearPreferences,
+} from '../services/preferenceService.js';
 
 export default function Products({ searchTerm, sortOption, onCartUpdate }) {
   const [products, setProducts] = useState([]);
@@ -29,40 +42,76 @@ export default function Products({ searchTerm, sortOption, onCartUpdate }) {
     message: '',
     severity: 'success',
   });
+  const [recentPreferences, setRecentPreferences] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [preferencesError, setPreferencesError] = useState('');
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm]);
+    fetchPreferencesData();
+  }, [searchTerm, sortOption]);
 
-const fetchProducts = async () => {
-  setIsLoading(true);
-  setError('');
-
-  try {
-    let data;
-
-    if (searchTerm && searchTerm.trim() !== '') {
-      // User typed something → search
-      data = await productService.searchProducts(searchTerm);
-    } else {
-      // No search term → load all products
-      data = await productService.getAllProducts();
+  const fetchPreferencesData = async () => {
+    try {
+      setPreferencesError('');
+      const [prefsData, recsData] = await Promise.all([
+        getRecentPreferences(),
+        getRecommendations(),
+      ]);
+      setRecentPreferences(prefsData.products || []);
+      setRecommendations(recsData.recommendations || []);
+    } catch (err) {
+      console.error('Preferences fetch error:', err);
+      setPreferencesError(
+        'Unable to load your preferences. Please try again later.'
+      );
     }
+  };
 
-    console.log('Products.jsx fetched products:', data);
-    setProducts(Array.isArray(data) ? data : []);
-  } catch (err) {
-    console.error('fetchProducts error:', err);
-    setError(
-      err?.error ||
-        err?.message ||
-        'Failed to load products. Please try again.'
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    setError('');
 
+    try {
+      let data;
+
+      if (searchTerm && searchTerm.trim() !== '') {
+        // User typed something → search and track
+        data = await productService.searchProducts(searchTerm);
+        // Track search interaction for first result
+        if (data && data.length > 0) {
+          await trackInteraction(data[0].id, 'search');
+          // Refresh preferences after tracking
+          fetchPreferencesData();
+        }
+      } else if (sortOption === 'preferences') {
+        // Sort by preferences
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        const sessionId = localStorage.getItem('sessionId');
+        data = await productService.getProductsByPreference(
+          user?.id,
+          sessionId
+        );
+      } else {
+        // No search term → load all products
+        data = await productService.getAllProducts();
+      }
+
+      console.log('Products.jsx fetched products:', data);
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('fetchProducts error:', err);
+      setError(
+        err?.error ||
+          err?.message ||
+          'Failed to load products. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Sort products
   const sortedProducts = React.useMemo(() => {
@@ -83,14 +132,22 @@ const fetchProducts = async () => {
     }
   }, [products, sortOption]);
 
+  // Handle product click
+  const handleProductClick = async (product) => {
+    await trackInteraction(product.id, 'click');
+    // Refresh preferences after tracking
+    fetchPreferencesData();
+  };
+
   // Handle add to cart
   const handleAddToCart = async (product) => {
+    // Track view interaction
+    await trackInteraction(product.id, 'view');
+    // Refresh preferences after tracking
+    fetchPreferencesData();
+
     // Check if user is logged in
-    const userJson = localStorage.getItem('user');
-    let user = null;
-    if (userJson && userJson !== 'undefined') {
-      user = JSON.parse(userJson);
-    }
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
 
     if (!user || !user.id) {
       setSnackbar({
@@ -134,6 +191,41 @@ const fetchProducts = async () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  const handleOpenClearDialog = () => {
+    setClearDialogOpen(true);
+  };
+
+  const handleCloseClearDialog = () => {
+    setClearDialogOpen(false);
+  };
+
+  const handleClearPreferences = async () => {
+    setClearing(true);
+    try {
+      await clearPreferences();
+      setRecentPreferences([]);
+      setRecommendations([]);
+      setClearDialogOpen(false);
+      setSnackbar({
+        open: true,
+        message: 'Preferences cleared successfully',
+        severity: 'success',
+      });
+      // Refresh products if sorted by preferences
+      if (sortOption === 'preferences') {
+        fetchProducts();
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to clear preferences',
+        severity: 'error',
+      });
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -171,6 +263,211 @@ const fetchProducts = async () => {
             Our Products
           </Typography>
         </Box>
+
+        {/* Your Recent Preferences Section */}
+        {recentPreferences.length > 0 && (
+          <Box sx={{ mb: 4 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 2,
+              }}
+            >
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: { xs: '1.25rem', md: '1.5rem' },
+                }}
+              >
+                Your Recent Preferences
+              </Typography>
+              <IconButton
+                onClick={handleOpenClearDialog}
+                size="small"
+                sx={{ color: 'error.main' }}
+                title="Clear Preferences"
+              >
+                <DeleteOutlineIcon />
+              </IconButton>
+            </Box>
+            <Grid container spacing={2}>
+              {recentPreferences.map((product) => (
+                <Grid item xs={6} sm={4} md={3} key={product.id}>
+                  <Card
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 3,
+                      },
+                    }}
+                    onClick={() => handleProductClick(product)}
+                  >
+                    <Box
+                      sx={{
+                        height: 120,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        p: 1,
+                        bgcolor: 'grey.50',
+                      }}
+                    >
+                      {product.image ? (
+                        <CardMedia
+                          component="img"
+                          image={product.image}
+                          alt={product.name}
+                          sx={{
+                            height: '100%',
+                            width: '100%',
+                            objectFit: 'contain',
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">
+                          No Image
+                        </Typography>
+                      )}
+                    </Box>
+                    <CardContent sx={{ p: 1.5, textAlign: 'center' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          mb: 0.5,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {product.name}
+                      </Typography>
+                      {product.category && (
+                        <Chip
+                          label={product.category}
+                          size="small"
+                          sx={{ fontSize: '0.7rem', height: 20 }}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Recommended for You Section */}
+        {recommendations.length > 0 && (
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                mb: 2,
+                fontSize: { xs: '1.25rem', md: '1.5rem' },
+              }}
+            >
+              Recommended for You
+            </Typography>
+            <Grid container spacing={2}>
+              {recommendations.slice(0, 4).map((product) => (
+                <Grid item xs={6} sm={4} md={3} key={product.id}>
+                  <Card
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 3,
+                      },
+                    }}
+                    onClick={() => handleProductClick(product)}
+                  >
+                    <Box
+                      sx={{
+                        height: 120,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        p: 1,
+                        bgcolor: 'grey.50',
+                      }}
+                    >
+                      {product.image ? (
+                        <CardMedia
+                          component="img"
+                          image={product.image}
+                          alt={product.name}
+                          sx={{
+                            height: '100%',
+                            width: '100%',
+                            objectFit: 'contain',
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">
+                          No Image
+                        </Typography>
+                      )}
+                    </Box>
+                    <CardContent sx={{ p: 1.5, textAlign: 'center' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 600,
+                          mb: 0.5,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {product.name}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mb: 0.5 }}
+                      >
+                        ${parseFloat(product.price).toFixed(2)}
+                      </Typography>
+                      {product.category && (
+                        <Chip
+                          label={product.category}
+                          size="small"
+                          sx={{ fontSize: '0.7rem', height: 20 }}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* No Preferences Message */}
+        {!preferencesError &&
+          recentPreferences.length === 0 &&
+          recommendations.length === 0 &&
+          !isLoading && (
+            <Alert severity="info" sx={{ mb: 4 }}>
+              No preferences available yet. Start exploring to get personalized
+              suggestions!
+            </Alert>
+          )}
+
+        {/* Preferences Error */}
+        {preferencesError && (
+          <Alert severity="warning" sx={{ mb: 4 }}>
+            {preferencesError}
+          </Alert>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -216,6 +513,7 @@ const fetchProducts = async () => {
                       boxShadow: 6,
                     },
                   }}
+                  onClick={() => handleProductClick(product)}
                 >
                   {/* Product Image */}
                   <Box
@@ -407,6 +705,30 @@ const fetchProducts = async () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Clear Preferences Dialog */}
+      <Dialog open={clearDialogOpen} onClose={handleCloseClearDialog}>
+        <DialogTitle>Clear All Preferences?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will remove all your saved interactions and preferences. This
+            action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseClearDialog} disabled={clearing}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleClearPreferences}
+            disabled={clearing}
+            color="error"
+            variant="contained"
+          >
+            {clearing ? 'Clearing...' : 'Clear Preferences'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

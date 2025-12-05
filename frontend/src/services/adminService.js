@@ -1,9 +1,28 @@
-import { adminAxios } from './axiosInstance.js';
+import axios from 'axios';
+import axiosInstance from './axiosInstance';
+
+
+const FALLBACK_API_URL = 'https://snacksmart-api-445738662856.us-central1.run.app';
+const API_URL = import.meta.env.VITE_API_URL || FALLBACK_API_URL;
+
+const adminAxios = axios.create({
+  baseURL: `${API_URL}/api/admin`,
+});
+
+// Add auth token to requests
+adminAxios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // Admin Auth
 export const adminAuthService = {
- login: async (email, password) => {
-    const response = await adminAxios.post(`/auth/login`, {
+  login: async (email, password) => {
+    console.log('API_URL used by axios:', API_URL);
+    const response = await axiosInstance.post(`/admin/auth/login`, {
       email,
       password,
     });

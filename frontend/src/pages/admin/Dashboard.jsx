@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, Paper, Typography, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Grid,
+  Paper,
+  Typography,
+  CircularProgress,
+  Button,
+} from '@mui/material';
 import {
   People as PeopleIcon,
   Inventory as InventoryIcon,
@@ -13,7 +20,7 @@ function StatsCard({ title, value, subtitle, icon, color }) {
     <Paper
       elevation={0}
       sx={{
-        p: 3,
+        p: { xs: 2, sm: 3 },
         border: '1px solid #e0e0e0',
         borderRadius: 2,
         display: 'flex',
@@ -56,6 +63,7 @@ export default function Dashboard() {
   const [topProducts, setTopProducts] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -63,6 +71,8 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const [statsData, topProductsData, ordersData] = await Promise.all([
         dashboardService.getStats(),
         salesService.getTopProducts(),
@@ -73,6 +83,9 @@ export default function Dashboard() {
       setRecentOrders(ordersData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError(
+        error.response?.data?.message || 'Failed to load dashboard data'
+      );
     } finally {
       setLoading(false);
     }
@@ -82,6 +95,23 @@ export default function Dashboard() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
         <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 8 }}>
+        <Typography variant="h6" sx={{ color: '#f44336', mb: 2 }}>
+          {error}
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={fetchDashboardData}
+          sx={{ bgcolor: '#1a1a1a', '&:hover': { bgcolor: '#333' } }}
+        >
+          Retry
+        </Button>
       </Box>
     );
   }
@@ -96,7 +126,7 @@ export default function Dashboard() {
       </Typography>
 
       {/* Stats Cards */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} lg={3}>
           <StatsCard
             title="Total Customers"
@@ -138,7 +168,12 @@ export default function Dashboard() {
       {/* Top Selling Products */}
       <Paper
         elevation={0}
-        sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          mb: 3,
+          border: '1px solid #e0e0e0',
+          borderRadius: 2,
+        }}
       >
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Top Selling Products
@@ -150,14 +185,23 @@ export default function Dashboard() {
                 key={product.productId}
                 sx={{
                   display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  p: 2,
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  gap: { xs: 1, sm: 0 },
+                  p: { xs: 1.5, sm: 2 },
                   bgcolor: '#fafafa',
                   borderRadius: 1,
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    width: { xs: '100%', sm: 'auto' },
+                  }}
+                >
                   <Typography
                     variant="h6"
                     sx={{ fontWeight: 600, color: '#999', minWidth: 30 }}
@@ -195,7 +239,11 @@ export default function Dashboard() {
       {/* Recent Orders */}
       <Paper
         elevation={0}
-        sx={{ p: 3, border: '1px solid #e0e0e0', borderRadius: 2 }}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          border: '1px solid #e0e0e0',
+          borderRadius: 2,
+        }}
       >
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Recent Orders
@@ -207,9 +255,11 @@ export default function Dashboard() {
                 key={order.id}
                 sx={{
                   display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  p: 2,
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  gap: { xs: 1, sm: 0 },
+                  p: { xs: 1.5, sm: 2 },
                   bgcolor: '#fafafa',
                   borderRadius: 1,
                 }}

@@ -22,6 +22,14 @@ import {
   InputLabel,
   CircularProgress,
   IconButton,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  CardActions,
+  Divider,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,10 +40,18 @@ import {
 import { couponService } from '../../services/adminService';
 
 export default function Coupons() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState(null);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
   const [formData, setFormData] = useState({
     code: '',
     type: 'percentage',
@@ -92,7 +108,51 @@ export default function Coupons() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validation
+    if (
+      !formData.code ||
+      !formData.value ||
+      !formData.validFrom ||
+      !formData.validTo
+    ) {
+      setNotification({
+        open: true,
+        message: 'Please fill in all required fields',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (parseFloat(formData.value) <= 0) {
+      setNotification({
+        open: true,
+        message: 'Value must be greater than 0',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (formData.type === 'percentage' && parseFloat(formData.value) > 100) {
+      setNotification({
+        open: true,
+        message: 'Percentage value cannot exceed 100',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (new Date(formData.validFrom) >= new Date(formData.validTo)) {
+      setNotification({
+        open: true,
+        message: 'Valid From date must be before Valid To date',
+        severity: 'error',
+      });
+      return;
+    }
+
     try {
+      setSubmitting(true);
       const couponData = {
         ...formData,
         value: parseFloat(formData.value),
@@ -100,14 +160,32 @@ export default function Coupons() {
 
       if (editingCoupon) {
         await couponService.update(editingCoupon.id, couponData);
+        setNotification({
+          open: true,
+          message: 'Coupon updated successfully',
+          severity: 'success',
+        });
       } else {
         await couponService.create(couponData);
+        setNotification({
+          open: true,
+          message: 'Coupon created successfully',
+          severity: 'success',
+        });
       }
       await fetchCoupons();
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving coupon:', error);
-      alert(error.response?.data?.message || 'Error saving coupon');
+      setNotification({
+        open: true,
+        message:
+          error.response?.data?.message ||
+          'Error saving coupon. Please try again.',
+        severity: 'error',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -115,9 +193,21 @@ export default function Coupons() {
     if (confirm('Are you sure you want to deactivate this coupon?')) {
       try {
         await couponService.deactivate(couponId);
+        setNotification({
+          open: true,
+          message: 'Coupon deactivated successfully',
+          severity: 'success',
+        });
         await fetchCoupons();
       } catch (error) {
         console.error('Error deactivating coupon:', error);
+        setNotification({
+          open: true,
+          message:
+            error.response?.data?.message ||
+            'Error deactivating coupon. Please try again.',
+          severity: 'error',
+        });
       }
     }
   };
@@ -130,9 +220,21 @@ export default function Coupons() {
     ) {
       try {
         await couponService.delete(couponId);
+        setNotification({
+          open: true,
+          message: 'Coupon deleted successfully',
+          severity: 'success',
+        });
         await fetchCoupons();
       } catch (error) {
         console.error('Error deleting coupon:', error);
+        setNotification({
+          open: true,
+          message:
+            error.response?.data?.message ||
+            'Error deleting coupon. Please try again.',
+          severity: 'error',
+        });
       }
     }
   };
@@ -195,12 +297,14 @@ export default function Coupons() {
         }}
       >
         {/* Header */}
-        <Box sx={{ p: 2.5, borderBottom: '1px solid #e0e0e0' }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5 }, borderBottom: '1px solid #e0e0e0' }}>
           <Box
             sx={{
               display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
               justifyContent: 'space-between',
-              alignItems: 'center',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              gap: 2,
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -226,8 +330,125 @@ export default function Coupons() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
+        ) : isMobile ? (
+          <Box sx={{ p: 2 }}>
+            {coupons.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {coupons.map((coupon) => (
+                  <Card key={coupon.id} variant="outlined">
+                    <CardContent>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          mb: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
+                        >
+                          {coupon.code}
+                        </Typography>
+                        {getStatusChip(coupon)}
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                        <Chip
+                          label={coupon.type}
+                          size="small"
+                          sx={{
+                            bgcolor:
+                              coupon.type === 'percentage'
+                                ? '#2196F3'
+                                : '#FF9800',
+                            color: '#fff',
+                            textTransform: 'capitalize',
+                          }}
+                        />
+                        <Chip
+                          label={
+                            coupon.type === 'percentage'
+                              ? `${coupon.value}%`
+                              : `$${parseFloat(coupon.value).toFixed(2)}`
+                          }
+                          size="small"
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Box>
+                      <Divider sx={{ my: 1.5 }} />
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          mb: 1,
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ color: '#666' }}>
+                          Valid From:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {new Date(coupon.validFrom).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ color: '#666' }}>
+                          Valid To:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {new Date(coupon.validTo).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                    <CardActions
+                      sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}
+                    >
+                      <Button
+                        size="small"
+                        startIcon={<EditIcon />}
+                        onClick={() => handleOpenDialog(coupon)}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Edit
+                      </Button>
+                      {coupon.isActive && (
+                        <Button
+                          size="small"
+                          color="warning"
+                          startIcon={<BlockIcon />}
+                          onClick={() => handleDeactivate(coupon.id)}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          Deactivate
+                        </Button>
+                      )}
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(coupon.id)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </CardActions>
+                  </Card>
+                ))}
+              </Box>
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{ color: '#999', textAlign: 'center', py: 4 }}
+              >
+                No coupons found
+              </Typography>
+            )}
+          </Box>
         ) : (
-          <TableContainer>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#fafafa' }}>
@@ -347,6 +568,7 @@ export default function Coupons() {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
+        fullScreen={window.innerWidth < 600}
       >
         <DialogTitle>
           {editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}
@@ -434,23 +656,48 @@ export default function Coupons() {
             </Box>
           </DialogContent>
           <DialogActions sx={{ p: 2.5 }}>
-            <Button onClick={handleCloseDialog} sx={{ textTransform: 'none' }}>
+            <Button
+              onClick={handleCloseDialog}
+              disabled={submitting}
+              sx={{ textTransform: 'none' }}
+            >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
+              disabled={submitting}
               sx={{
                 bgcolor: '#1a1a1a',
                 '&:hover': { bgcolor: '#333' },
                 textTransform: 'none',
               }}
             >
-              {editingCoupon ? 'Save Changes' : 'Create Coupon'}
+              {submitting
+                ? 'Saving...'
+                : editingCoupon
+                ? 'Save Changes'
+                : 'Create Coupon'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

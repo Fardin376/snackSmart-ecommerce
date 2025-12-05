@@ -228,6 +228,7 @@ export default function Topbar({
                   }}
                 >
                   <MenuItem value="">Sort by</MenuItem>
+                  <MenuItem value="preferences">Your Preferences</MenuItem>
                   <MenuItem value="name-asc">Name: A → Z</MenuItem>
                   <MenuItem value="name-desc">Name: Z → A</MenuItem>
                   <MenuItem value="price-asc">Price: Low → High</MenuItem>
@@ -359,6 +360,7 @@ export default function Topbar({
                 }}
               >
                 <MenuItem value="">Sort by</MenuItem>
+                <MenuItem value="preferences">Your Preferences</MenuItem>
                 <MenuItem value="name-asc">Name: A → Z</MenuItem>
                 <MenuItem value="name-desc">Name: Z → A</MenuItem>
                 <MenuItem value="price-asc">Price: Low → High</MenuItem>

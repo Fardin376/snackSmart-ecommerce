@@ -14,14 +14,28 @@ import {
   TextField,
   InputAdornment,
   CircularProgress,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  Divider,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { customerService } from '../../services/adminService';
 
 export default function Customers() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   useEffect(() => {
     fetchCustomers();
@@ -41,9 +55,23 @@ export default function Customers() {
   const handleStatusToggle = async (customerId, currentStatus) => {
     try {
       await customerService.updateStatus(customerId, !currentStatus);
+      setNotification({
+        open: true,
+        message: `Customer ${
+          !currentStatus ? 'activated' : 'deactivated'
+        } successfully`,
+        severity: 'success',
+      });
       await fetchCustomers();
     } catch (error) {
       console.error('Error updating customer status:', error);
+      setNotification({
+        open: true,
+        message:
+          error.response?.data?.message ||
+          'Error updating customer status. Please try again.',
+        severity: 'error',
+      });
     }
   };
 
@@ -65,7 +93,7 @@ export default function Customers() {
         }}
       >
         {/* Search Bar */}
-        <Box sx={{ p: 2.5, borderBottom: '1px solid #e0e0e0' }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5 }, borderBottom: '1px solid #e0e0e0' }}>
           <TextField
             size="small"
             placeholder="Search by name or email..."
@@ -79,7 +107,7 @@ export default function Customers() {
               ),
             }}
             sx={{
-              width: 300,
+              width: { xs: '100%', sm: 300 },
               '& .MuiOutlinedInput-root': {
                 bgcolor: '#f5f5f5',
               },
@@ -92,8 +120,72 @@ export default function Customers() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
+        ) : isMobile ? (
+          <Box sx={{ p: 2 }}>
+            {customers.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {customers.map((customer) => (
+                  <Card key={customer.id} variant="outlined">
+                    <CardContent>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          mb: 2,
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Typography
+                            variant="body1"
+                            sx={{ fontWeight: 500, mb: 0.5 }}
+                          >
+                            {customer.firstName} {customer.lastName}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: '#666', mb: 1 }}
+                          >
+                            {customer.email}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#999' }}>
+                            Joined{' '}
+                            {new Date(customer.createdAt).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        <Switch
+                          checked={customer.isActive}
+                          onChange={() =>
+                            handleStatusToggle(customer.id, customer.isActive)
+                          }
+                          size="small"
+                        />
+                      </Box>
+                      <Chip
+                        label={customer.isActive ? 'active' : 'inactive'}
+                        size="small"
+                        sx={{
+                          bgcolor: customer.isActive ? '#000' : '#e0e0e0',
+                          color: customer.isActive ? '#fff' : '#666',
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{ color: '#999', textAlign: 'center', py: 4 }}
+              >
+                No customers found
+              </Typography>
+            )}
+          </Box>
         ) : (
-          <TableContainer>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#fafafa' }}>
@@ -168,6 +260,22 @@ export default function Customers() {
           </TableContainer>
         )}
       </Paper>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

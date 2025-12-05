@@ -33,11 +33,7 @@ export default function Cart({
   const [localCart, setLocalCart] = useState([]);
 
   useEffect(() => {
-    const userJson = localStorage.getItem('user');
-    let storedUser = null;
-    if (userJson && userJson !== 'undefined') {
-      storedUser = JSON.parse(userJson);
-    }
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
     setUser(storedUser);
   }, []);
 

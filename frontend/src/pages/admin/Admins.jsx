@@ -22,6 +22,13 @@ import {
   InputLabel,
   CircularProgress,
   IconButton,
+  useMediaQuery,
+  useTheme,
+  Card,
+  CardContent,
+  Divider,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,10 +38,18 @@ import {
 import { adminManagementService } from '../../services/adminService';
 
 export default function Admins() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -87,21 +102,69 @@ export default function Admins() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validation
+    if (!formData.name || !formData.email || !formData.role) {
+      setNotification({
+        open: true,
+        message: 'Please fill in all required fields',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (!editingAdmin && !formData.password) {
+      setNotification({
+        open: true,
+        message: 'Password is required for new admins',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (!formData.email.includes('@')) {
+      setNotification({
+        open: true,
+        message: 'Please enter a valid email address',
+        severity: 'error',
+      });
+      return;
+    }
+
     try {
+      setSubmitting(true);
       if (editingAdmin) {
         const updateData = { ...formData };
         if (!updateData.password) {
           delete updateData.password;
         }
         await adminManagementService.update(editingAdmin.id, updateData);
+        setNotification({
+          open: true,
+          message: 'Admin updated successfully',
+          severity: 'success',
+        });
       } else {
         await adminManagementService.create(formData);
+        setNotification({
+          open: true,
+          message: 'Admin created successfully',
+          severity: 'success',
+        });
       }
       await fetchAdmins();
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving admin:', error);
-      alert(error.response?.data?.message || 'Error saving admin');
+      setNotification({
+        open: true,
+        message:
+          error.response?.data?.message ||
+          'Error saving admin. Please try again.',
+        severity: 'error',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -109,9 +172,21 @@ export default function Admins() {
     if (confirm('Are you sure you want to deactivate this admin?')) {
       try {
         await adminManagementService.deactivate(adminId);
+        setNotification({
+          open: true,
+          message: 'Admin deactivated successfully',
+          severity: 'success',
+        });
         await fetchAdmins();
       } catch (error) {
         console.error('Error deactivating admin:', error);
+        setNotification({
+          open: true,
+          message:
+            error.response?.data?.message ||
+            'Error deactivating admin. Please try again.',
+          severity: 'error',
+        });
       }
     }
   };
@@ -124,9 +199,21 @@ export default function Admins() {
     ) {
       try {
         await adminManagementService.delete(adminId);
+        setNotification({
+          open: true,
+          message: 'Admin deleted successfully',
+          severity: 'success',
+        });
         await fetchAdmins();
       } catch (error) {
         console.error('Error deleting admin:', error);
+        setNotification({
+          open: true,
+          message:
+            error.response?.data?.message ||
+            'Error deleting admin. Please try again.',
+          severity: 'error',
+        });
       }
     }
   };
@@ -149,12 +236,14 @@ export default function Admins() {
         }}
       >
         {/* Header */}
-        <Box sx={{ p: 2.5, borderBottom: '1px solid #e0e0e0' }}>
+        <Box sx={{ p: { xs: 2, sm: 2.5 }, borderBottom: '1px solid #e0e0e0' }}>
           <Box
             sx={{
               display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
               justifyContent: 'space-between',
-              alignItems: 'center',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              gap: 2,
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -182,8 +271,106 @@ export default function Admins() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
+        ) : isMobile ? (
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {admins.map((admin) => (
+                <Card key={admin.id} variant="outlined">
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        mb: 2,
+                      }}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant="body1"
+                          sx={{ fontWeight: 500, mb: 0.5 }}
+                        >
+                          {admin.name}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: '#666', mb: 1 }}
+                        >
+                          {admin.email}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#999' }}>
+                          Created{' '}
+                          {new Date(admin.createdAt).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDialog(admin)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    <Divider sx={{ my: 1 }} />
+                    <Box
+                      sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}
+                    >
+                      <Chip
+                        label={admin.role}
+                        size="small"
+                        sx={{
+                          bgcolor:
+                            admin.role === 'Super Admin' ? '#000' : '#757575',
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                        }}
+                      />
+                      <Chip
+                        label={admin.isActive ? 'active' : 'inactive'}
+                        size="small"
+                        sx={{
+                          bgcolor: admin.isActive ? '#4CAF50' : '#9e9e9e',
+                          color: '#fff',
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                        }}
+                      />
+                    </Box>
+                    {currentUser.role === 'Super Admin' &&
+                      admin.id !== currentUser.id && (
+                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                          {admin.isActive && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="warning"
+                              onClick={() => handleDeactivate(admin.id)}
+                              sx={{ textTransform: 'none', flex: 1 }}
+                            >
+                              Deactivate
+                            </Button>
+                          )}
+                          {!admin.isActive && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleDelete(admin.id)}
+                              startIcon={<DeleteIcon />}
+                              sx={{ textTransform: 'none', flex: 1 }}
+                            >
+                              Delete
+                            </Button>
+                          )}
+                        </Box>
+                      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          </Box>
         ) : (
-          <TableContainer>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#fafafa' }}>
@@ -303,6 +490,7 @@ export default function Admins() {
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
+        fullScreen={window.innerWidth < 600}
       >
         <DialogTitle>
           {editingAdmin ? 'Edit Admin' : 'Add New Admin'}
@@ -358,23 +546,48 @@ export default function Admins() {
             </Box>
           </DialogContent>
           <DialogActions sx={{ p: 2.5 }}>
-            <Button onClick={handleCloseDialog} sx={{ textTransform: 'none' }}>
+            <Button
+              onClick={handleCloseDialog}
+              disabled={submitting}
+              sx={{ textTransform: 'none' }}
+            >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
+              disabled={submitting}
               sx={{
                 bgcolor: '#1a1a1a',
                 '&:hover': { bgcolor: '#333' },
                 textTransform: 'none',
               }}
             >
-              {editingAdmin ? 'Save Changes' : 'Add Admin'}
+              {submitting
+                ? 'Saving...'
+                : editingAdmin
+                ? 'Save Changes'
+                : 'Add Admin'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

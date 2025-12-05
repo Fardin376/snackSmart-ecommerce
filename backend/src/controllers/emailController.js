@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import { verifyEmailToken } from '../utils/auth.js';
-
-const prisma = new PrismaClient();
 
 /**
  * GET /api/email/confirm - Confirm user email

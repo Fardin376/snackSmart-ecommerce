@@ -2,9 +2,10 @@ import express from 'express';
 import {
   registerUser,
   loginUser,
-  confirmEmail,
   getUser,
 } from '../controllers/authController.js';
+
+import { confirmEmail } from '../controllers/emailController.js';
 
 const router = express.Router();
 
