@@ -28,7 +28,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,13 +36,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${apiUrl}/auth/login`, formData);
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      const response = await axios.post(`${API_URL}/auth/login`, formData);
+
+      if (response.data?.token && response.data?.user) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        const from = location.state?.from?.pathname || '/';
+        navigate(from, { replace: true });
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || err.message || 'Login failed');
     } finally {
       setLoading(false);
     }

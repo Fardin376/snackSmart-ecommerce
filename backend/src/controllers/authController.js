@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import {
   hashPassword,
   comparePassword,
@@ -7,8 +7,6 @@ import {
 } from '../utils/auth.js';
 import { sendConfirmationEmail } from '../utils/email.js';
 import { registerSchema, loginSchema } from '../utils/validators.js';
-
-const prisma = new PrismaClient();
 
 /**
  * Register a new user
@@ -148,15 +146,61 @@ export const confirmEmail = async (req, res) => {
     const jwt = (await import('jsonwebtoken')).default;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Update user confirmation status
-    const user = await prisma.user.update({
-      where: { id: decoded.userId },
-      data: { confirmed: true },
+    console.log('Decoded token:', decoded);
+    console.log('User ID from token:', decoded.userId);
+
+    // Use transaction to ensure atomic operation
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if user exists
+      const existingUser = await tx.user.findUnique({
+        where: { id: decoded.userId },
+      });
+
+      console.log('User found:', existingUser ? 'Yes' : 'No');
+      console.log('User confirmed status before update:', existingUser?.confirmed);
+
+      if (!existingUser) {
+        throw new Error('USER_NOT_FOUND');
+      }
+
+      if (existingUser.confirmed) {
+        console.log('User already confirmed');
+        return existingUser;
+      }
+
+      // Update user confirmation status
+      const updatedUser = await tx.user.update({
+        where: { id: decoded.userId },
+        data: { confirmed: true },
+      });
+
+      console.log('User confirmed status after update:', updatedUser.confirmed);
+      return updatedUser;
     });
 
-    res.json({ message: 'Email confirmed successfully!' });
+    // Verify the update persisted by reading again
+    const verifyUser = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, email: true, confirmed: true },
+    });
+    
+    console.log('Verification read - User confirmed:', verifyUser?.confirmed);
+
+    res.json({ 
+      message: 'Email confirmed successfully!',
+      confirmed: verifyUser?.confirmed 
+    });
   } catch (error) {
     console.error('Email confirmation error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
+
+    if (error.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     if (error.name === 'JsonWebTokenError') {
       return res.status(400).json({ message: 'Invalid token' });

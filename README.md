@@ -13,12 +13,14 @@ A full-stack e-commerce application built with React, Node.js, Express, and Pris
 ## Tech Stack
 
 ### Frontend
+
 - React with Vite
 - Material-UI
 - React Router
 - Axios
 
 ### Backend
+
 - Node.js
 - Express.js
 - Prisma ORM
@@ -28,6 +30,7 @@ A full-stack e-commerce application built with React, Node.js, Express, and Pris
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js (v16 or higher)
 - MySQL Database
 - npm or yarn
@@ -35,25 +38,29 @@ A full-stack e-commerce application built with React, Node.js, Express, and Pris
 ### Installation
 
 1. Clone the repository
+
 ```bash
 git clone https://github.com/Fardin376/snackSmart-ecommerce.git
 cd snackSmart-ecommerce
 ```
 
 2. Install backend dependencies
+
 ```bash
 cd backend
 npm install
 ```
 
 3. Install frontend dependencies
+
 ```bash
 cd frontend
 npm install
 ```
 
 4. Configure environment variables
-Create a `.env` file in the backend directory with:
+   Create a `.env` file in the backend directory with:
+
 ```
 DATABASE_URL="mysql://username:password@localhost:3306/database_name"
 JWT_SECRET="your-secret-key"
@@ -61,18 +68,21 @@ PORT=4000
 ```
 
 5. Run database migrations
+
 ```bash
 cd backend
 npx prisma migrate dev
 ```
 
 6. Start the backend server
+
 ```bash
 cd backend
 npm run dev
 ```
 
 7. Start the frontend development server
+
 ```bash
 cd frontend
 npm run dev

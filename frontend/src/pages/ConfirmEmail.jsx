@@ -18,7 +18,7 @@ export default function ConfirmEmail() {
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
   useEffect(() => {
     const confirmEmail = async () => {
@@ -32,7 +32,7 @@ export default function ConfirmEmail() {
 
       try {
         const response = await axios.get(
-          `${apiUrl}/auth/confirm?token=${token}`
+          `${API_URL}/auth/confirm?token=${token}`
         );
         setStatus('success');
         setMessage(response.data.message);
