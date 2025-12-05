@@ -15,6 +15,7 @@ export async function register(data) {
 }
 
 export async function login(data) {
+<<<<<<< HEAD
   try {
     const response = await axiosInstance.post(`/auth/login`, data);
     return response.data;
@@ -34,4 +35,13 @@ export async function confirmEmail(token) {
       error.response?.data?.message || 'Email confirmation failed.';
     throw new Error(message);
   }
+=======
+  const response = await axiosInstance.post(`/auth/login`, data);
+  return response.data;
+}
+
+export async function confirmEmail(token) {
+  const response = await axiosInstance.get(`/auth/confirm?token=${token}`);
+  return response.data;
+>>>>>>> f82d4fcc45a32ef9506f373cbc26618803e9819c
 }

@@ -31,7 +31,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
   React.useEffect(() => {
     if (searchParams.get('confirmed') === 'true') {
@@ -52,6 +52,7 @@ export default function Login() {
     setLoading(true);
 
     try {
+<<<<<<< HEAD
       const response = await apiLogin(formData);
 
       if (response?.token && response?.user) {
@@ -59,6 +60,13 @@ export default function Login() {
         // Storing the whole user object in localStorage is not recommended.
         // Storing a stringified version is better.
         localStorage.setItem('user', JSON.stringify(response.user));
+=======
+      const response = await axios.post(`${API_URL}/auth/login`, formData);
+
+      if (response.data?.token && response.data?.user) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+>>>>>>> f82d4fcc45a32ef9506f373cbc26618803e9819c
         const from = location.state?.from?.pathname || '/';
         navigate(from, { replace: true });
       } else {

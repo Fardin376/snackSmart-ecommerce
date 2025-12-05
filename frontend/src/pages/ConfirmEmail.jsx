@@ -16,9 +16,15 @@ export default function ConfirmEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('verifying');
+<<<<<<< HEAD
   const [message, setMessage] = useState(
     'Please wait while we confirm your email address...'
   );
+=======
+  const [message, setMessage] = useState('');
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+>>>>>>> f82d4fcc45a32ef9506f373cbc26618803e9819c
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -35,7 +41,26 @@ export default function ConfirmEmail() {
         }
       } else {
         setStatus('error');
+<<<<<<< HEAD
         setMessage('Invalid or missing confirmation token in the URL.');
+=======
+        setMessage('Invalid confirmation link');
+        return;
+      }
+
+      try {
+        const response = await axios.get(
+          `${API_URL}/auth/confirm?token=${token}`
+        );
+        setStatus('success');
+        setMessage(response.data.message);
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      } catch (err) {
+        setStatus('error');
+        setMessage(err.response?.data?.message || 'Confirmation failed');
+>>>>>>> f82d4fcc45a32ef9506f373cbc26618803e9819c
       }
     };
 
