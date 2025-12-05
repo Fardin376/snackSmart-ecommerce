@@ -1,10 +1,8 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import axiosInstance from './axiosInstance';
 
 export async function register(data) {
   try {
-    const response = await axios.post(`${API_URL}/auth/register`, data);
+    const response = await axiosInstance.post(`/auth/register`, data);
     return response.data;
   } catch (error) {
     const message =
@@ -17,11 +15,23 @@ export async function register(data) {
 }
 
 export async function login(data) {
-  const response = await axios.post(`${API_URL}/auth/login`, data);
-  return response.data;
+  try {
+    const response = await axiosInstance.post(`/auth/login`, data);
+    return response.data;
+  } catch (error) {
+    const message =
+      error.response?.data?.message || error.message || 'Login failed';
+    throw new Error(message);
+  }
 }
 
 export async function confirmEmail(token) {
-  const response = await axios.get(`${API_URL}/auth/confirm?token=${token}`);
-  return response.data;
+  try {
+    const response = await axiosInstance.get(`/email/confirm?token=${token}`);
+    return response.data;
+  } catch (error) {
+    const message =
+      error.response?.data?.message || 'Email confirmation failed.';
+    throw new Error(message);
+  }
 }

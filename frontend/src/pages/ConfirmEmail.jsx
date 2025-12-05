@@ -10,42 +10,36 @@ import {
   Avatar,
 } from '@mui/material';
 import { CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
-import axios from 'axios';
+import { confirmEmail as confirmEmailApi } from '../services/api';
 
 export default function ConfirmEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('verifying');
-  const [message, setMessage] = useState('');
-
-  const API_URL = import.meta.env.VITE_API_URL;
+  const [message, setMessage] = useState(
+    'Please wait while we confirm your email address...'
+  );
 
   useEffect(() => {
-    const confirmEmail = async () => {
+    const verifyToken = async () => {
       const token = searchParams.get('token');
-
-      if (!token) {
+      if (token) {
+        try {
+          const data = await confirmEmailApi(token);
+          setStatus('success');
+          setMessage(data.message || 'Email confirmed successfully!');
+          setTimeout(() => navigate('/login'), 3000);
+        } catch (error) {
+          setStatus('error');
+          setMessage(error.message || 'Email confirmation failed.');
+        }
+      } else {
         setStatus('error');
-        setMessage('Invalid confirmation link');
-        return;
-      }
-
-      try {
-        const response = await axios.get(
-          `${apiUrl}/auth/confirm?token=${token}`
-        );
-        setStatus('success');
-        setMessage(response.data.message);
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      } catch (err) {
-        setStatus('error');
-        setMessage(err.response?.data?.message || 'Confirmation failed');
+        setMessage('Invalid or missing confirmation token in the URL.');
       }
     };
 
-    confirmEmail();
+    verifyToken();
   }, [searchParams, navigate]);
 
   return (
@@ -72,50 +66,11 @@ export default function ConfirmEmail() {
             <>
               <CircularProgress size={60} sx={{ color: '#785cb3', mb: 3 }} />
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                Verifying Email
+                Verifying Your Email
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Please wait while we confirm your email address...
               </Typography>
-            </>
-          )}
-
-          {status === 'success' && (
-            <>
-              <Avatar
-                sx={{
-                  width: 80,
-                  height: 80,
-                  bgcolor: '#4caf50',
-                  mx: 'auto',
-                  mb: 3,
-                }}
-              >
-                <CheckCircle sx={{ fontSize: 50 }} />
-              </Avatar>
-              <Typography
-                variant="h5"
-                sx={{ fontWeight: 600, mb: 2, color: '#4caf50' }}
-              >
-                Email Confirmed!
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Your email has been confirmed! You can now log in.
-              </Typography>
-              <Button
-                component={Link}
-                to="/login"
-                variant="contained"
-                size="large"
-                sx={{
-                  bgcolor: '#785cb3',
-                  '&:hover': { bgcolor: '#6a4c9f' },
-                  px: 4,
-                  textTransform: 'none',
-                }}
-              >
-                Go to Login
-              </Button>
             </>
           )}
 
@@ -154,6 +109,39 @@ export default function ConfirmEmail() {
                 }}
               >
                 Register Again
+              </Button>
+            </>
+          )}
+
+          {status === 'success' && (
+            <>
+              <Avatar
+                sx={{
+                  width: 80,
+                  height: 80,
+                  bgcolor: 'success.main',
+                  mx: 'auto',
+                  mb: 3,
+                }}
+              >
+                <CheckCircle sx={{ fontSize: 50 }} />
+              </Avatar>
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 600, mb: 2, color: 'success.main' }}
+              >
+                Verification Successful
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                {message} You will be redirected to the login page shortly.
+              </Typography>
+              <Button
+                component={Link}
+                to="/login"
+                variant="contained"
+                sx={{ bgcolor: '#785cb3', '&:hover': { bgcolor: '#6a4c9f' } }}
+              >
+                Go to Login
               </Button>
             </>
           )}

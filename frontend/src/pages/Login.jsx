@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -13,22 +13,38 @@ import {
   Avatar,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import axios from 'axios';
+import {login as apiLogin} from '../services/api';
 
 import logo from '/logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
+
+  React.useEffect(() => {
+    if (searchParams.get('confirmed') === 'true') {
+      setSuccess('Email confirmed successfully! You can now log in.');
+    } else if (searchParams.get('error')) {
+      const errorCode = searchParams.get('error');
+      if (errorCode === 'expired_token') {
+        setError('Your confirmation link has expired. Please register again.');
+      } else {
+        setError('Email confirmation failed. Please try again or contact support.');
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,13 +52,20 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${apiUrl}/auth/login`, formData);
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      const response = await apiLogin(formData);
+
+      if (response?.token && response?.user) {
+        localStorage.setItem('token', response.token);
+        // Storing the whole user object in localStorage is not recommended.
+        // Storing a stringified version is better.
+        localStorage.setItem('user', JSON.stringify(response.user));
+        const from = location.state?.from?.pathname || '/';
+        navigate(from, { replace: true });
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -103,6 +126,12 @@ export default function Login() {
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
+            </Alert>
+          )}
+
+          {success && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              {success}
             </Alert>
           )}
 

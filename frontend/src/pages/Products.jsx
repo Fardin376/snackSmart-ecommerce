@@ -86,7 +86,11 @@ const fetchProducts = async () => {
   // Handle add to cart
   const handleAddToCart = async (product) => {
     // Check if user is logged in
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const userJson = localStorage.getItem('user');
+    let user = null;
+    if (userJson && userJson !== 'undefined') {
+      user = JSON.parse(userJson);
+    }
 
     if (!user || !user.id) {
       setSnackbar({

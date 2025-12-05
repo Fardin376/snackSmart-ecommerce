@@ -31,10 +31,12 @@ export default function AdminLogin() {
         formData.password
       );
       localStorage.setItem('adminToken', response.token);
-      localStorage.setItem('adminUser', JSON.stringify(response.admin));
+      if (response.admin) {
+        localStorage.setItem('adminUser', JSON.stringify(response.admin));
+      }
       navigate('/admin/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials');
+      setError(err.message || 'Invalid credentials');
     } finally {
       setLoading(false);
     }

@@ -1,24 +1,9 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL;
-
-const adminAxios = axios.create({
-  baseURL: `${API_URL}/admin`,
-});
-
-// Add auth token to requests
-adminAxios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import { adminAxios } from './axiosInstance.js';
 
 // Admin Auth
 export const adminAuthService = {
-  login: async (email, password) => {
-    const response = await axios.post(`${API_URL}/admin/auth/login`, {
+ login: async (email, password) => {
+    const response = await adminAxios.post(`/auth/login`, {
       email,
       password,
     });

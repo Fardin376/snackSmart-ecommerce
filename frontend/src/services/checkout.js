@@ -1,4 +1,4 @@
-import axios from "axios";
+import axiosInstance from "./axiosInstance";
 import { useEffect, useState } from "react";
 
 export const useGetCustomerFromCustId = (user) => {
@@ -10,8 +10,8 @@ export const useGetCustomerFromCustId = (user) => {
       setError(new Error("user or cust_id is undefined"));
       return;
     }
-    axios
-      .get(`http://localhost:8081/api/customer/customers/cust_id`, {
+    axiosInstance
+      .get(`/customer/customers/cust_id`, {
         params: {
           cust_id: user.cust_id,
         },
@@ -33,8 +33,8 @@ export const useGetAllSellers = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:8085/api/ecommerce/sellers`, {})
+    axiosInstance
+      .get(`/ecommerce/sellers`, {})
       .then((res) => {
         if (!res.data) throw new Error("error on get seller info");
         setSellers(res.data ? res.data : "");
@@ -49,11 +49,8 @@ export const useGetAllSellers = () => {
 
 export const updateCustomerAddress = async (user, new_address) => {
   try {
-    const res = await axios.put(
-      "http://localhost:8081/api/customer/address/update",
-      null,
-      {
-        params: {
+    const res = await axiosInstance.put("/customer/address/update", null, {
+      params: {
           cust_id: user.cust_id,
           new_address: new_address,
         },
@@ -74,11 +71,8 @@ export const updateCustomerAddress = async (user, new_address) => {
 
 export const updateCustomerCity = async (user, new_city) => {
   try {
-    const res = await axios.put(
-      "http://localhost:8081/api/customer/city/update",
-      null,
-      {
-        params: {
+    const res = await axiosInstance.put("/customer/city/update", null, {
+      params: {
           cust_id: user.cust_id,
           new_city: new_city,
         },
@@ -171,8 +165,8 @@ export const getTransactionToken = async (transaction_info) => {
   console.log("gross", data.transaction_details.gross_amount);
   console.log("items", data.item_details);
   try {
-    const res = await axios.post(
-      "http://localhost:8085/api/ecommerce/transaction",
+    const res = await axiosInstance.post(
+      "/ecommerce/transaction",
       data
     );
     console.log(res);
@@ -230,8 +224,8 @@ export const getTransactionTokenAll = async (transaction_info) => {
   console.log("gross", data.transaction_details.gross_amount);
   console.log("items", data.item_details);
   try {
-    const res = await axios.post(
-      "http://localhost:8085/api/ecommerce/transaction",
+    const res = await axiosInstance.post(
+      "/ecommerce/transaction",
       data
     );
     console.log(res);
@@ -251,10 +245,7 @@ export const getTransactionTokenAll = async (transaction_info) => {
 
 export const getLatestShipping = async () => {
   try {
-    const res = await axios.get(
-      "http://localhost:8086/api/shipping/latest",
-      null
-    );
+    const res = await axiosInstance.get("/shipping/latest", null);
     if (!res.data) throw new Error(res.data.error);
 
     return {
@@ -270,8 +261,8 @@ export const getLatestShipping = async () => {
 
 export const insertShipping = async (shipping_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8086/api/shipping/create",
+    const res = await axiosInstance.post(
+      "/shipping/create",
       shipping_data
     );
     console.log(res);
@@ -291,8 +282,8 @@ export const insertShipping = async (shipping_data) => {
 
 export const insertPayment = async (transaction_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8087/api/payment/create",
+    const res = await axiosInstance.post(
+      "/payment/create",
       transaction_data
     );
     console.log(res);
@@ -312,8 +303,8 @@ export const insertPayment = async (transaction_data) => {
 
 export const insertOrder = async (order_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8085/api/ecommerce/order",
+    const res = await axiosInstance.post(
+      "/ecommerce/order",
       order_data
     );
     console.log(res);
@@ -333,8 +324,8 @@ export const insertOrder = async (order_data) => {
 
 export const insertOrderPerSeller = async (orderperseller_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8085/api/ecommerce/orderperseller",
+    const res = await axiosInstance.post(
+      "/ecommerce/orderperseller",
       orderperseller_data
     );
     console.log(res);
@@ -354,8 +345,8 @@ export const insertOrderPerSeller = async (orderperseller_data) => {
 
 export const insertOrderDetail = async (orderdetail_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8085/api/ecommerce/orderdetail",
+    const res = await axiosInstance.post(
+      "/ecommerce/orderdetail",
       {
         order_number: orderdetail_data.order_number,
         product_id: orderdetail_data.product_id,
@@ -380,8 +371,8 @@ export const insertOrderDetail = async (orderdetail_data) => {
 
 export const insertTransactionLumiere = async (lumieretrans_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8083/api/lumiere/transaction",
+    const res = await axiosInstance.post(
+      "/lumiere/transaction",
       lumieretrans_data
     );
     console.log(res);
@@ -401,8 +392,8 @@ export const insertTransactionLumiere = async (lumieretrans_data) => {
 
 export const insertTransactionZalya = async (zalyatrans_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8084/api/zalya/transaction",
+    const res = await axiosInstance.post(
+      "/zalya/transaction",
       zalyatrans_data
     );
     console.log(res);
@@ -422,8 +413,8 @@ export const insertTransactionZalya = async (zalyatrans_data) => {
 
 export const insertTransactionEffe = async (effetrans_data) => {
   try {
-    const res = await axios.post(
-      "http://localhost:8082/api/effe/transaction",
+    const res = await axiosInstance.post(
+      "/effe/transaction",
       effetrans_data
     );
     console.log(res);
@@ -443,10 +434,7 @@ export const insertTransactionEffe = async (effetrans_data) => {
 
 export const getLatestPayment = async () => {
   try {
-    const res = await axios.get(
-      "http://localhost:8080/api/data/payments/latest",
-      null
-    );
+    const res = await axiosInstance.get("/data/payments/latest", null);
     if (!res.data) throw new Error(res.data.error);
 
     return {
@@ -462,10 +450,7 @@ export const getLatestPayment = async () => {
 
 export const getLatestOrder = async () => {
   try {
-    const res = await axios.get(
-      "http://localhost:8085/api/ecommerce/order/latest",
-      null
-    );
+    const res = await axiosInstance.get("/ecommerce/order/latest", null);
     if (!res.data) throw new Error(res.data.error);
 
     return {
@@ -481,10 +466,7 @@ export const getLatestOrder = async () => {
 
 export const getAllShippers = async () => {
   try {
-    const res = await axios.get(
-      "http://localhost:8080/api/data/shippers",
-      null
-    );
+    const res = await axiosInstance.get("/data/shippers", null);
     if (!res.data) throw new Error(res.data.error);
 
     return {
