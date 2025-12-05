@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma.js';
 import {
   hashPassword,
   comparePassword,
@@ -7,8 +7,6 @@ import {
 } from '../utils/auth.js';
 import { sendConfirmationEmail } from '../utils/email.js';
 import { registerSchema, loginSchema } from '../utils/validators.js';
-
-const prisma = new PrismaClient();
 
 /**
  * Register a new user
@@ -127,43 +125,6 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({
         errors: error.errors.map((e) => e.message),
       });
-    }
-
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-/**
- * Confirm email
- */
-export const confirmEmail = async (req, res) => {
-  try {
-    const { token } = req.query;
-
-    if (!token) {
-      return res.status(400).json({ message: 'Token is required' });
-    }
-
-    // Verify token
-    const jwt = (await import('jsonwebtoken')).default;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Update user confirmation status
-    const user = await prisma.user.update({
-      where: { id: decoded.userId },
-      data: { confirmed: true },
-    });
-
-    res.json({ message: 'Email confirmed successfully!' });
-  } catch (error) {
-    console.error('Email confirmation error:', error);
-
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(400).json({ message: 'Invalid token' });
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(400).json({ message: 'Token has expired' });
     }
 
     res.status(500).json({ message: 'Server error' });
